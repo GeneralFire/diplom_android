@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp" >
+
+    <ImageView
+        android:id="@+id/imageViewBorders"
+        android:layout_width="330dp"
+        android:layout_height="330dp"
+        android:layout_above="@+id/tgAccelControl"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="24dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/circle_image_foreground"
+        tools:ignore="MissingConstraints"
+        tools:srcCompat="@mipmap/circle_image_foreground" />
+
+    <ToggleButton
+        android:id="@+id/tgAccelControl"
+        android:layout_width="70dp"
+        android:layout_height="50dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="40dp"
+        android:layout_x="68dp"
+        android:layout_y="502dp"
+        app:layout_constraintBottom_toBottomOf="@+id/buttonConnectionStatus"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.8"
+        app:layout_constraintStart_toEndOf="@+id/buttonConnectionStatus"
+        app:layout_constraintTop_toTopOf="@+id/buttonConnectionStatus"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <TextView
+        android:id="@+id/textViewConnectionStatus"
+        android:layout_width="125dp"
+        android:layout_height="39dp"
+        android:layout_above="@+id/buttonConnectionStatus"
+        android:layout_alignStart="@+id/buttonConnectionStatus"
+        android:layout_marginStart="20dp"
+        android:layout_toStartOf="@+id/tgAccelControl"
+        android:layout_x="52dp"
+        android:layout_y="443dp"
+        android:text="Status"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_editor_absoluteY="461dp" />
+
+    <Button
+        android:id="@+id/buttonConnectionStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="28dp"
+        android:layout_x="232dp"
+        android:layout_y="455dp"
+        android:text="Connection Status"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/textViewConnectionStatus"
+        app:layout_constraintTop_toBottomOf="@+id/textViewConnectionStatus"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <ImageView
+        android:id="@+id/imageViewStick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="100dp"
+        android:layout_marginTop="100dp"
+        android:layout_x="78dp"
+        android:layout_y="283dp"
+        app:layout_constraintStart_toStartOf="@+id/imageViewBorders"
+        app:layout_constraintTop_toTopOf="@+id/imageViewBorders"
+        app:srcCompat="@android:drawable/alert_light_frame" />
+
+    <TextView
+        android:id="@+id/AccelControlText"
+        android:layout_width="130dp"
+        android:layout_height="37dp"
+        android:layout_marginBottom="44dp"
+        android:text="AccelControl"
+        app:layout_constraintBottom_toBottomOf="@+id/textViewConnectionStatus"
+        app:layout_constraintStart_toStartOf="@+id/tgAccelControl"
+        app:layout_constraintTop_toTopOf="@+id/textViewConnectionStatus"
+        app:layout_constraintVertical_bias="0.0" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout >
