@@ -1,11 +1,13 @@
 package com.example.diplomapp;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothSocket;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View.OnTouchListener;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,27 +20,30 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.Timer;
 import java.util.UUID;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity {
 
     /*
     joystick params
      */
     float x, y;
+    byte normolizedX, normolizedY;
     ImageView imageViewStick, imageViewBorders;
     boolean downActionWasInsideBorders = false;
     TextView textViewStatus;
     float centeredStickX, centeredStickY;
     ConstraintLayout mainLayout = null;
-
+    ToggleButton tgAccelButton;
     /*
     Bluetooth Stuff
     +ADDR:21:13:41C1
@@ -50,6 +55,7 @@ public class MainActivity extends AppCompatActivity{
     final String UUID_STRING_WELL_KNOWN_SPP = "00001101-0000-1000-8000-00805F9B34FB";
     ArrayAdapter<String> pairedDeviceAdapter;
     ThreadConnectBTdevice threadConnectBTdevice;
+    boolean buttonTextConnected = false;
     ThreadConnected threadConnected;
     BluetoothAdapter bluetoothAdapter;
     private UUID uuid;
@@ -57,9 +63,11 @@ public class MainActivity extends AppCompatActivity{
     private static String moduleAdress = "00:21:13:00:41:C1";
     private static String moduleName = "OLD_HC_05";
     private boolean isHcConnected = false;
-    ArrayList<String> pairedDeviceArrayList;
-    private StringBuilder sb = new StringBuilder();
-    //@SuppressWarnings(value = "warning")
+    private boolean isHcConnecting = false;
+
+    Timer timer;
+
+
 
     private class ThreadConnectBTdevice extends Thread { // Поток для коннекта с Bluetooth
         private BluetoothSocket bluetoothSocket = null;
@@ -73,7 +81,17 @@ public class MainActivity extends AppCompatActivity{
         }
         @Override
         public void run() { // Коннект
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    //Toast.makeText(MainActivity.this, "Check slave BT device!", Toast.LENGTH_LONG).show();
+                    buttonConnectionStatus.setText("Connecting");
+                }
+            });
             boolean success = false;
+
+            isHcConnected = false;
+            isHcConnecting = true;
             try {
                 bluetoothSocket.connect();
                 success = true;
@@ -83,37 +101,53 @@ public class MainActivity extends AppCompatActivity{
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this, "Нет коннекта, проверьте Bluetooth-устройство с которым хотите соединица!", Toast.LENGTH_LONG).show();
+                        //Toast.makeText(MainActivity.this, "Check slave BT device!", Toast.LENGTH_LONG).show();
+                        buttonConnectionStatus.setText("Not connected");
                     }
                 });
+
                 try {
                     bluetoothSocket.close();
                 }
                 catch (IOException e1) {
                     e1.printStackTrace();
                 }
+                isHcConnected = false;
+                isHcConnecting = false;
             }
 
             if(success) {  // Если законнектились, тогда открываем панель с кнопками и запускаем поток приёма и отправки данных
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        textViewStatus.setText("успешный коннект");
+                        buttonConnectionStatus.setText("Connected");
                     }
                 });
                 threadConnected = new ThreadConnected(bluetoothSocket);
                 threadConnected.start(); // запуск потока приёма и отправки данных
+                isHcConnected = true;
+                isHcConnecting = false;
             }
 
         }
         public void cancel() {
-            Toast.makeText(getApplicationContext(), "Close - BluetoothSocket", Toast.LENGTH_LONG).show();
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(MainActivity.this, "Check slave BT device!", Toast.LENGTH_LONG).show();
+                    buttonConnectionStatus.setText("Disconnected");
+                }
+            });
             try {
                 bluetoothSocket.close();
+                isHcConnected = false;
+                isHcConnecting = false;
             }
             catch (IOException e) {
                 e.printStackTrace();
             }
+
         }
     } // ThreadConnectBTdevice:
 
@@ -131,6 +165,7 @@ public class MainActivity extends AppCompatActivity{
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
             connectedInputStream = in;
             connectedOutputStream = out;
         }
@@ -138,7 +173,17 @@ public class MainActivity extends AppCompatActivity{
         public void run() { // Приём данных
             while (true) {
                 try {
-                    connectedOutputStream.write(0x33);
+                    Thread.sleep(20);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    byte[] toSendBuffer = new byte[4];
+                    toSendBuffer[0] = (normolizedX);
+                    toSendBuffer[1] = normolizedY;
+                    toSendBuffer[2] = (byte)'M';
+                    toSendBuffer[3] = tgAccelButton.isChecked()?(byte)'+':(byte)'-';
+                    connectedOutputStream.write(toSendBuffer);
                 } catch (IOException e) {
                     break;
                 }
@@ -160,6 +205,8 @@ public class MainActivity extends AppCompatActivity{
         imageViewStick.setX(centeredStickX);
         imageViewStick.setY(centeredStickY);
         textViewStatus.setText("returnStickToDefaultPosition");
+        normolizedX = 0;
+        normolizedY = 0;
     }
 
     @Override
@@ -172,13 +219,13 @@ public class MainActivity extends AppCompatActivity{
         textViewStatus.setText("onCreate");
         mainLayout = findViewById(R.id.mainLayout);
         buttonConnectionStatus = findViewById(R.id.buttonConnectionStatus);
+        tgAccelButton = findViewById(R.id.tgAccelControl);
 
         uuid = UUID.fromString(UUID_STRING_WELL_KNOWN_SPP);
 
         buttonConnectionStatus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                textViewStatus.setText("btnConnectionStatus Click:)");
                 ///
                 /// check bluetooth support
                 bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -200,12 +247,14 @@ public class MainActivity extends AppCompatActivity{
                                 threadConnectBTdevice = new ThreadConnectBTdevice(device2);
                                 threadConnectBTdevice.start();  // Запускаем поток для подключения Bluetooth
                                 textViewStatus.setText("threadConnectBTDevice.start were called");
-
-                                isHcConnected = true;
                             }
 
                         }
                     }
+                }
+                else {
+                    threadConnectBTdevice.cancel();
+                    textViewStatus.setText("canceling thread");
                 }
 
             }
@@ -233,14 +282,18 @@ public class MainActivity extends AppCompatActivity{
                             if (Math.sqrt((centeredStickX - x) * (centeredStickX - x) + (centeredStickY - y) * (centeredStickY - y)) < maxLength) {
                                 imageViewStick.setX(x);
                                 imageViewStick.setY(y);
-                                textViewStatus.setText("inBorderMoving moving");
+                                normolizedX = (byte)((x - centeredStickX) / imageViewBorders.getWidth() * 255);
+                                normolizedY = (byte)((centeredStickY - y)/ imageViewBorders.getHeight() * 255);
+                                textViewStatus.setText("inBrdrMov:" + String.valueOf(normolizedX) + ":" + String.valueOf(normolizedY));
                             } else {
                                 float angle = (float) Math.atan2(y - centeredStickY, x - centeredStickX);
                                 x = (float) (Math.cos(angle) * maxLength);
                                 y = (float) (Math.sin(angle) * maxLength);
                                 imageViewStick.setX(centeredStickX + x);
                                 imageViewStick.setY(centeredStickY + y);
-                                textViewStatus.setText("outOfBorder moving:" + String.valueOf(angle));
+                                normolizedX = (byte)(127 * Math.cos(angle));
+                                normolizedY = (byte)(-127 * Math.sin(angle));
+                                textViewStatus.setText("outOfBrdrMov:" + String.valueOf(normolizedX) + ":" + String.valueOf(normolizedY));
                             }
                         }
                         break;
@@ -251,6 +304,7 @@ public class MainActivity extends AppCompatActivity{
                     default:
                         textViewStatus.setText("unkn MotionEvent");
                 }
+
                 return true;
             }
         });
@@ -265,6 +319,4 @@ public class MainActivity extends AppCompatActivity{
         returnStickToDefaultPosition();
         textViewStatus.setText("onWindowFocusChanged");
     }
-
-
 }

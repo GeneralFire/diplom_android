@@ -81,7 +81,7 @@
 
             android:layout_x="232dp"
             android:layout_y="455dp"
-            android:text="Connection Status"
+            android:text="toConnect"
             app:layout_column="0"
             app:layout_row="1"
             android:onClick="ConnectionStatusButtonOnClick"/>
