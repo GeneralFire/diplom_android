@@ -10,16 +10,16 @@
 
     <ImageView
         android:id="@+id/imageViewBorders"
-        android:layout_width="330dp"
-        android:layout_height="330dp"
+        android:layout_width="262dp"
+        android:layout_height="265dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="32dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.493"
+        app:layout_constraintHorizontal_bias="0.496"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/graph"
         app:srcCompat="@mipmap/circle_image_foreground"
         tools:ignore="MissingConstraints"
         tools:srcCompat="@mipmap/circle_image_foreground" />
@@ -99,5 +99,25 @@
             app:layout_row="1" />
     </androidx.gridlayout.widget.GridLayout>
 
+    <com.jjoe64.graphview.GraphView
+        android:id="@+id/graph"
+        android:layout_width="243dp"
+        android:layout_height="96dp"
+        android:layout_marginTop="24dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/ThreadTicker"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="threadTicker"
+        app:layout_constraintBottom_toTopOf="@+id/gridLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.479"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageViewBorders"
+        app:layout_constraintVertical_bias="0.47" />
 
 </androidx.constraintlayout.widget.ConstraintLayout >
