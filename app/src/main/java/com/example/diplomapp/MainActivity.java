@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothSocket;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -23,11 +24,22 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.Formatter;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.Timer;
 import java.util.UUID;
@@ -38,6 +50,13 @@ import java.io.OutputStream;
 import static java.lang.Thread.MAX_PRIORITY;
 
 public class MainActivity extends AppCompatActivity {
+
+    /*
+    accel values
+    */
+    float   accelX = 0,
+            accelY = 0,
+            accelZ = 0;
 
     /*
     joystick params
@@ -72,6 +91,18 @@ public class MainActivity extends AppCompatActivity {
     private boolean isHcConnected = false;
     private boolean isHcConnecting = false;
     final byte[] toSendBuffer = new byte[4];
+    final byte[] mpuDataByte = new byte[47];
+    final short[] mpuDataShort = new short[3];
+    byte[] firstCharacter = new byte[1];
+    public static short getShort(byte[] b) {
+        return (short) (((b[1] << 8) | b[0] & 0xff));
+    }
+
+    // gpaph
+    GraphView graph;
+    private int lastX = 0;
+    LineGraphSeries<DataPoint> seriesX, seriesY, seriesZ;
+    Viewport viewport;
 
     private class ThreadConnected extends Thread {    // Поток - приём и отправка данных
         private InputStream connectedInputStream;
@@ -80,6 +111,10 @@ public class MainActivity extends AppCompatActivity {
         private boolean exit = false;
         BluetoothSocket classSocket;
         private int tickerton = 0;
+        DataInputStream dataInput;
+        BufferedReader r;
+        StringBuilder total;
+        String line;
         public ThreadConnected(BluetoothSocket socket) {
             classSocket = socket;
             InputStream in = null;
@@ -94,58 +129,154 @@ public class MainActivity extends AppCompatActivity {
             }
 
             connectedInputStream = in;
-            connectedOutputStream = out;
+            connectedOutputStream =  out;
         }
 
         @Override
         public void run() { // Приём данных
             while (!exit) {
-                try {
-                    connectedInputStream.skip(connectedInputStream.available());
-                    connectedOutputStream.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                /*tickerton++;
 
+                // print inputAvailable
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        threadTicker.setText(String.valueOf(tickerton));
-                        //buttonConnectionStatus.setText("writeException1");
-
-                    }
-                });*/
-
-                try {
-                    Thread.sleep(30);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(MainActivity.this, "writeException2", Toast.LENGTH_LONG).show();
-                            //buttonConnectionStatus.setText("writeException1");
+                        try {
+                            threadTicker.setText(String.valueOf(connectedInputStream.available()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                    });
-                }
+                    }
+                });
 
-                toSendBuffer[0] = normolizedX;
-                toSendBuffer[1] = normolizedY;
-                toSendBuffer[2] = (byte)'M';
-                toSendBuffer[3] = tgAccelButton.isChecked()?(byte)'+':(byte)'-';
+                    /*
+                    if (connectedInputStream.available() > 12)
+                        connectedInputStream.skip(connectedInputStream.available());
 
+                    connectedOutputStream.flush();
+                    */
+
+                // sleep 10 ms
                 try {
+                    Thread.sleep(10);
+
+                    // connectedInputStream.skip(connectedInputStream.available());
+
+                    // send getAccelData cmd
+                    toSendBuffer[0] = (byte) 'A';
+                    toSendBuffer[1] = (byte) 'C';
+                    toSendBuffer[2] = (byte) 'C';
+                    toSendBuffer[3] = (byte) 'E';
+
+                    connectedOutputStream.write(toSendBuffer);
+                    /**/
+                    // while(connectedInputStream.available() == 0);
+                    connectedOutputStream.flush();
+
+                    // send jostick data
+                    toSendBuffer[0] = normolizedX;
+                    toSendBuffer[1] = normolizedY;
+                    toSendBuffer[2] = (byte)'M';
+                    toSendBuffer[3] = tgAccelButton.isChecked()?(byte)'+':(byte)'-';
+
+
                     connectedOutputStream.write(toSendBuffer);
 
+                    int currentInputAvailable = connectedInputStream.available();
+                    boolean isReadedValid = false;
+
+                    if (currentInputAvailable > 150) {
+                        connectedInputStream.skip(connectedInputStream.available());
+                    }
+
+                    if (currentInputAvailable > 48) {
+                        while(true) {
+                            connectedInputStream.read(firstCharacter);
+                            if (firstCharacter[0] == (byte) 'S')
+                                break;
+                        }
+                        //
+                        //  может пока искали 'S' от потока ничего не осталось(
+
+                        if (connectedInputStream.available() >= 45) {
+                            connectedInputStream.read(firstCharacter);      // skip ":"
+
+                            connectedInputStream.read(mpuDataByte, 0, 45);
+                            String str = new String(mpuDataByte);
+                            String[] msgParts = str.split("\\:");
+                            Scanner scanner = new Scanner(str);
+                            accelX = Float.parseFloat(msgParts[0]);
+                            accelY = Float.parseFloat(msgParts[1]);
+                            accelZ = Float.parseFloat(msgParts[2]);
+                            if (msgParts[3].toCharArray()[0] == 'E')
+                                isReadedValid = true;
+                            else
+                                isReadedValid = false;
+                        }
+                        /*
+                        mpuDataShort[0] = (short) (getShort(mpuDataByte) & 0xFFFF);
+
+                        connectedInputStream.read(mpuDataByte, 0, 2);
+                        mpuDataShort[1] = (short) (getShort(mpuDataByte) & 0xFFFF);
+
+                        connectedInputStream.read(mpuDataByte, 0, 2);
+                        mpuDataShort[2] = (short) (getShort(mpuDataByte) & 0xFFFF);
+
+                        Formatter formatter = new Formatter();
+                        formatter.format("%02x", mpuDataShort[0]);
+                        Log.d("MY_APP", formatter.toString());
+                        */
+                        connectedInputStream.skip(connectedInputStream.available());
+                    }
+
+
+                    final boolean finalIsReadedValid = isReadedValid;
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            //Toast.makeText(MainActivity.this, "Success sended", Toast.LENGTH_LONG).show();
-                            textViewStatus.setText("Sended: " + String.valueOf(toSendBuffer[0]) + ":" + String.valueOf(toSendBuffer[1]));
+                            // Toast.makeText(MainActivity.this, "Success sended", Toast.LENGTH_LONG).show();
+                            // textViewStatus.setText("Sended: " + String.valueOf(toSendBuffer[0]) + ":" + String.valueOf(toSendBuffer[1]));
+                            /*
+                            String str = new String(mpuDataByte);
+                            textViewStatus.setText("Gotten: "
+                                    + str
+                            );
+                            */
+                            if (finalIsReadedValid) {
+                                textViewStatus.setText("Gotten: "
+                                        + String.valueOf(accelX)
+                                        + ":"
+                                        + String.valueOf(accelY)
+                                        + ":"
+                                        + String.valueOf(accelZ)
+                                );
+                                seriesX.appendData(new DataPoint(++lastX, accelX), true, 50);
+                                seriesY.appendData(new DataPoint(++lastX, accelY), true, 50);
+                                seriesZ.appendData(new DataPoint(++lastX, accelZ), true, 50);
+
+                                viewport.scrollToEnd();
+
+                                if (lastX > 50) {
+                                    viewport.setMaxX(lastX);
+                                    viewport.setMinX(lastX - 50);
+                                }
+
+                                graph.onDataChanged(false, false);
+
+
+                            }
+                            /*
+                            textViewStatus.setText("Gotten: "
+                                    + Integer.toHexString(mpuDataShort[0])
+                                    + ":"
+                                    + Integer.toHexString(mpuDataShort[1])
+                                    + ":"
+                                    + Integer.toHexString(mpuDataShort[2])
+                            );
+                            */
                         }
+
                     });
-                } catch (IOException e) {
+                } catch (IOException | InterruptedException e) {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -215,16 +346,34 @@ public class MainActivity extends AppCompatActivity {
         threadTicker = findViewById(R.id.ThreadTicker);
 
         uuid = UUID.fromString(UUID_STRING_WELL_KNOWN_SPP);
-        GraphView graph = (GraphView) findViewById(R.id.graph);
-        LineGraphSeries<DataPoint> series = new LineGraphSeries<DataPoint>(new DataPoint[] {
-                new DataPoint(0, 1),
-                new DataPoint(1, 5),
-                new DataPoint(2, 3),
-                new DataPoint(3, 2),
-                new DataPoint(4, 6)
-        });
-        graph.addSeries(series);
 
+        graph = (GraphView) findViewById(R.id.graph);
+        viewport = graph.getViewport();
+        viewport.setYAxisBoundsManual(true);
+        viewport.setXAxisBoundsManual(true);
+
+        viewport.setMinY(-2);
+        viewport.setMaxY(2);
+        viewport.setScrollable(true);
+
+        seriesX = new LineGraphSeries<DataPoint>();
+        seriesX.setColor(Color.RED);
+
+        seriesY = new LineGraphSeries<DataPoint>();
+        seriesY.setColor(Color.GREEN);
+
+        seriesZ = new LineGraphSeries<DataPoint>();
+        seriesY.setColor(Color.BLUE);
+
+        graph.addSeries(seriesX);
+        graph.addSeries(seriesY);
+        graph.addSeries(seriesZ);
+
+        graph.setTitle("MPU data");
+
+        graph.getGridLabelRenderer().setHorizontalAxisTitle("ticks");
+        graph.getGridLabelRenderer().setVerticalAxisTitle("value");
+        graph.getGridLabelRenderer().setPadding(32);
         buttonConnectionStatus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -305,6 +454,7 @@ public class MainActivity extends AppCompatActivity {
                                 normolizedX = (byte)((x - centeredStickX) / imageViewBorders.getWidth() * 255);
                                 normolizedY = (byte)((centeredStickY - y)/ imageViewBorders.getHeight() * 255);
 
+                                /*
                                 if (threadConnected != null) {
                                     textViewStatus.setText(
                                             String.valueOf(threadConnected.getState())
@@ -314,6 +464,7 @@ public class MainActivity extends AppCompatActivity {
                                             ));
 
                                 }
+                                */
 
                             } else {
                                 float angle = (float) Math.atan2(y - centeredStickY, x - centeredStickX);

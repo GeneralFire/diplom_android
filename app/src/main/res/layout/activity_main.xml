@@ -15,7 +15,7 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="32dp"
+        app:layout_constraintBottom_toTopOf="@+id/ThreadTicker"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.496"
         app:layout_constraintStart_toStartOf="parent"
@@ -39,14 +39,14 @@
 
     <androidx.gridlayout.widget.GridLayout
         android:id="@+id/gridLayout"
-        android:layout_width="359dp"
-        android:layout_height="126dp"
+        android:layout_width="361dp"
+        android:layout_height="96dp"
         android:layout_gravity="center"
+        android:layout_marginBottom="24dp"
         app:columnCount="2"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageViewBorders"
         app:rowCount="2">
 
         <TextView
@@ -81,10 +81,10 @@
 
             android:layout_x="232dp"
             android:layout_y="455dp"
+            android:onClick="ConnectionStatusButtonOnClick"
             android:text="toConnect"
             app:layout_column="0"
-            app:layout_row="1"
-            android:onClick="ConnectionStatusButtonOnClick"/>
+            app:layout_row="1" />
 
         <ToggleButton
             android:id="@+id/tgAccelControl"
@@ -101,10 +101,11 @@
 
     <com.jjoe64.graphview.GraphView
         android:id="@+id/graph"
-        android:layout_width="243dp"
-        android:layout_height="96dp"
+        android:layout_width="331dp"
+        android:layout_height="206dp"
         android:layout_marginTop="24dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.495"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -112,12 +113,10 @@
         android:id="@+id/ThreadTicker"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
         android:text="threadTicker"
         app:layout_constraintBottom_toTopOf="@+id/gridLayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.479"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageViewBorders"
-        app:layout_constraintVertical_bias="0.47" />
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout >
